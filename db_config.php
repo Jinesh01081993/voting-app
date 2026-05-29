@@ -1,8 +1,8 @@
 <?php
-$servername = "localhost";   // or your DB server IP
-$username   = "your_db_user";
-$password   = "your_db_password";
-$database   = "your_db_name";
+$servername = "100.27.227.71";   // or your DB server IP
+$username   = "votinguser";
+$password   = "Password@123";
+$database   = "votingdb";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $database);
