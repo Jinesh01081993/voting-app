@@ -14,23 +14,35 @@ jobs:
     - name: Checkout Latest Code
       uses: actions/checkout@v4
 
-    - name: Create Temp Folder On App Server
+    - name: Create Temp Folder
       run: |
         ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
         mkdir -p /home/ubuntu/appdeploy
         "
 
-    - name: Copy Files To Temp Folder
+    - name: Copy New Code Without Database Files
       run: |
         rsync -avz --delete \
+        --exclude='.git' \
+        --exclude='.github' \
+        --exclude='.env' \
+        --exclude='node_modules' \
+        --exclude='storage' \
+        --exclude='uploads' \
+        --exclude='config/database.php' \
         -e "ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no" \
         ./ ubuntu@98.81.219.151:/home/ubuntu/appdeploy/
 
-    - name: Move Files To Web Root
+    - name: Move Code To Web Server
       run: |
         ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
-        sudo rm -rf /var/www/html/* &&
-        sudo cp -r /home/ubuntu/appdeploy/* /var/www/html/
+        sudo rsync -av --delete \
+        --exclude='.env' \
+        --exclude='node_modules' \
+        --exclude='storage' \
+        --exclude='uploads' \
+        --exclude='config/database.php' \
+        /home/ubuntu/appdeploy/ /var/www/html/
         "
 
     - name: Set Permissions
