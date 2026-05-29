@@ -1,0 +1,51 @@
+name: Auto Deploy App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+
+    - name: Checkout Latest Code
+      uses: actions/checkout@v4
+
+    - name: Check GitHub Repository
+      run: |
+        echo "GitHub Connected Successfully"
+        git branch
+
+    - name: Remove Old Application Code
+      run: |
+        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
+        sudo rm -rf /var/www/html/*
+        "
+
+    - name: Copy New Application Code
+      run: |
+        rsync -avz --delete \
+        -e "ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no" \
+        ./ ubuntu@98.81.219.151:/var/www/html/
+
+    - name: Set File Permissions
+      run: |
+        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
+        sudo chown -R www-data:www-data /var/www/html &&
+        sudo chmod -R 775 /var/www/html
+        "
+
+    - name: Restart Apache2 Service
+      run: |
+        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
+        sudo systemctl restart apache2
+        "
+
+    - name: Check Apache2 Status
+      run: |
+        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
+        sudo systemctl status apache2 --no-pager
+        "
