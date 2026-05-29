@@ -1,4 +1,4 @@
-name: Auto Deploy App
+name: Auto Deploy Voting App
 
 on:
   push:
@@ -11,46 +11,43 @@ jobs:
 
     steps:
 
-    - name: Checkout Code
+    - name: Checkout Latest Code
       uses: actions/checkout@v4
 
-    - name: Create Temp Folder
+    - name: Ensure Web Root Exists
       run: |
-        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
-        mkdir -p /home/ubuntu/appdeploy
-        "
+        sudo mkdir -p /var/www/html
 
-    - name: Copy Files
+    - name: Remove Old Application Files
       run: |
-        rsync -avz --delete --no-perms --no-owner --no-group \
+        sudo find /var/www/html -mindepth 1 \
+        ! -name '.env' \
+        ! -name 'uploads' \
+        ! -name 'storage' \
+        -exec rm -rf {} +
+
+    - name: Copy New Application Files
+      run: |
+        sudo rsync -av --delete \
         --exclude='.git' \
         --exclude='.github' \
+        --exclude='.env' \
         --exclude='node_modules' \
-        --exclude='vendor' \
-        --exclude='.env' \
-        --exclude='storage' \
         --exclude='uploads' \
-        --exclude='*.log' \
-        -e "ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no" \
-        ./ ubuntu@98.81.219.151:/home/ubuntu/appdeploy/
+        --exclude='storage' \
+        --exclude='.gitignore' \
+        ./ /var/www/html/
 
-    - name: Move Files To Web Root
+    - name: Set Permissions
       run: |
-        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
-        sudo rsync -av --delete \
-        --exclude='.env' \
-        /home/ubuntu/appdeploy/ /var/www/html/
-        "
+        sudo chown -R www-data:www-data /var/www/html
+        sudo find /var/www/html -type d -exec chmod 775 {} \;
+        sudo find /var/www/html -type f -exec chmod 664 {} \;
 
-    - name: Fix Permissions
+    - name: Restart Apache2
       run: |
-        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
-        sudo chown -R www-data:www-data /var/www/html &&
-        sudo chmod -R 775 /var/www/html
-        "
-
-    - name: Restart Apache
-      run: |
-        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
         sudo systemctl restart apache2
-        "
+
+    - name: Verify Apache2 Status
+      run: |
+        sudo systemctl is-active apache2
