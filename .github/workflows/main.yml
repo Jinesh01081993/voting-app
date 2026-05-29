@@ -1,4 +1,4 @@
-name: Deploy App
+name: Auto Deploy App
 
 on:
   push:
@@ -14,11 +14,40 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Deploy To Server
+    - name: Create Temp Folder
       run: |
-        rsync -avz \
+        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
+        mkdir -p /home/ubuntu/appdeploy
+        "
+
+    - name: Copy Files
+      run: |
+        rsync -avz --delete --no-perms --no-owner --no-group \
+        --exclude='.git' \
+        --exclude='.github' \
+        --exclude='node_modules' \
+        --exclude='vendor' \
+        --exclude='.env' \
+        --exclude='storage' \
+        --exclude='uploads' \
+        --exclude='*.log' \
         -e "ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no" \
-        ./ ubuntu@98.81.219.151:/var/www/html/
+        ./ ubuntu@98.81.219.151:/home/ubuntu/appdeploy/
+
+    - name: Move Files To Web Root
+      run: |
+        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
+        sudo rsync -av --delete \
+        --exclude='.env' \
+        /home/ubuntu/appdeploy/ /var/www/html/
+        "
+
+    - name: Fix Permissions
+      run: |
+        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
+        sudo chown -R www-data:www-data /var/www/html &&
+        sudo chmod -R 775 /var/www/html
+        "
 
     - name: Restart Apache
       run: |
