@@ -1,4 +1,4 @@
-name: Auto Deploy App
+name: Deploy App
 
 on:
   push:
@@ -11,48 +11,16 @@ jobs:
 
     steps:
 
-    - name: Checkout Latest Code
+    - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Create Temp Folder
+    - name: Deploy To Server
       run: |
-        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
-        mkdir -p /home/ubuntu/appdeploy
-        "
-
-    - name: Copy New Code Without Database Files
-      run: |
-        rsync -avz --delete \
-        --exclude='.git' \
-        --exclude='.github' \
-        --exclude='.env' \
-        --exclude='node_modules' \
-        --exclude='storage' \
-        --exclude='uploads' \
-        --exclude='config/database.php' \
+        rsync -avz \
         -e "ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no" \
-        ./ ubuntu@98.81.219.151:/home/ubuntu/appdeploy/
+        ./ ubuntu@98.81.219.151:/var/www/html/
 
-    - name: Move Code To Web Server
-      run: |
-        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
-        sudo rsync -av --delete \
-        --exclude='.env' \
-        --exclude='node_modules' \
-        --exclude='storage' \
-        --exclude='uploads' \
-        --exclude='config/database.php' \
-        /home/ubuntu/appdeploy/ /var/www/html/
-        "
-
-    - name: Set Permissions
-      run: |
-        ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
-        sudo chown -R www-data:www-data /var/www/html &&
-        sudo chmod -R 775 /var/www/html
-        "
-
-    - name: Restart Apache2
+    - name: Restart Apache
       run: |
         ssh -i ~/.ssh/mykey.pem -o StrictHostKeyChecking=no ubuntu@98.81.219.151 "
         sudo systemctl restart apache2
