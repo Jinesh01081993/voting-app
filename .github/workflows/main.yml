@@ -14,40 +14,39 @@ jobs:
     - name: Checkout Latest Code
       uses: actions/checkout@v4
 
-    - name: Ensure Web Root Exists
+    - name: Create Temp Deploy Folder
       run: |
-        sudo mkdir -p /var/www/html
+        rm -rf /tmp/appdeploy
+        mkdir -p /tmp/appdeploy
 
-    - name: Remove Old Application Files
+    - name: Copy Repository Files To Temp
       run: |
-        sudo find /var/www/html -mindepth 1 \
-        ! -name '.env' \
-        ! -name 'uploads' \
-        ! -name 'storage' \
-        -exec rm -rf {} +
-
-    - name: Copy New Application Files
-      run: |
-        sudo rsync -av --delete \
+        rsync -av \
         --exclude='.git' \
         --exclude='.github' \
         --exclude='.env' \
         --exclude='node_modules' \
         --exclude='uploads' \
         --exclude='storage' \
-        --exclude='.gitignore' \
-        ./ /var/www/html/
+        ./ /tmp/appdeploy/
+
+    - name: Deploy Application
+      run: |
+        sudo rsync -av --delete \
+        --exclude='.env' \
+        --exclude='uploads' \
+        --exclude='storage' \
+        /tmp/appdeploy/ /var/www/html/
 
     - name: Set Permissions
       run: |
         sudo chown -R www-data:www-data /var/www/html
-        sudo find /var/www/html -type d -exec chmod 775 {} \;
-        sudo find /var/www/html -type f -exec chmod 664 {} \;
+        sudo chmod -R 775 /var/www/html
 
     - name: Restart Apache2
       run: |
         sudo systemctl restart apache2
 
-    - name: Verify Apache2 Status
+    - name: Verify Apache2
       run: |
-        sudo systemctl is-active apache2
+        sudo systemctl status apache2 --no-pager
